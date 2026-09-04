@@ -61,8 +61,7 @@ CREATE TABLE IF NOT EXISTS users (
 // Execute table creation
 if ($conn->multi_query($createTablesSQL) === TRUE) {
     // Clear all previous results
-    while ($conn->next_result()) {;
-    }
+    while ($conn->next_result()) {;}
 } else {
     die("Error creating tables: " . $conn->error);
 }
