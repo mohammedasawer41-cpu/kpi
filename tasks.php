@@ -11,6 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 $filter_status = isset($_GET['status']) ? $_GET['status'] : '';
 $filter_person = isset($_GET['person']) ? (int)$_GET['person'] : '';
 $filter_priority = isset($_GET['priority']) ? $_GET['priority'] : '';
+$filter_has_anomalies = isset($_GET['has_anomalies']) ? (int)$_GET['has_anomalies'] : '';
 
 // Build query
 $query = "SELECT t.*, p.name as person_name FROM tasks t 
@@ -35,6 +36,14 @@ if (!empty($filter_priority)) {
     $query .= " AND t.priority = ?";
     $params[] = $filter_priority;
     $types .= 's';
+}
+
+if (!empty($filter_has_anomalies)) {
+    if ($filter_has_anomalies == 1) {
+        $query .= " AND t.anomalies_detected IS NOT NULL AND t.anomalies_detected != ''";
+    } else {
+        $query .= " AND (t.anomalies_detected IS NULL OR t.anomalies_detected = '')";
+    }
 }
 
 $query .= " ORDER BY t.task_date ASC";
@@ -81,6 +90,7 @@ while ($row = $peopleResult->fetch_assoc()) {
             <nav>
                 <a href="index.php">Calendar</a>
                 <a href="tasks.php">All Tasks</a>
+                <a href="anomalies.php">Anomalies</a>
                 <a href="people.php">People</a>
                 <a href="logout.php">Logout</a>
             </nav>
@@ -125,6 +135,14 @@ while ($row = $peopleResult->fetch_assoc()) {
                     </div>
 
                     <div class="form-group" style="margin-bottom: 0;">
+                        <select name="has_anomalies">
+                            <option value="">-- All --</option>
+                            <option value="1" <?php echo $filter_has_anomalies == 1 ? 'selected' : ''; ?>>With Anomalies</option>
+                            <option value="0" <?php echo $filter_has_anomalies == 0 ? 'selected' : ''; ?>>Without Anomalies</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
                         <button type="submit" class="btn btn-primary">Filter</button>
                         <a href="tasks.php" class="btn btn-secondary">Clear</a>
                     </div>
@@ -140,6 +158,7 @@ while ($row = $peopleResult->fetch_assoc()) {
                             <th>Assigned To</th>
                             <th>Status</th>
                             <th>Priority</th>
+                            <th>Anomalies</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -159,6 +178,13 @@ while ($row = $peopleResult->fetch_assoc()) {
                                     <span class="badge <?php echo $statusClass; ?>"><?php echo htmlspecialchars($task['status']); ?></span>
                                 </td>
                                 <td><?php echo htmlspecialchars($task['priority']); ?></td>
+                                <td>
+                                    <?php if ($task['anomalies_detected']): ?>
+                                        <span class="badge badge-danger">🔴 Yes</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-success">✓ No</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <a href="task-form.php?id=<?php echo $task['id']; ?>" class="btn-sm">Edit</a>
                                     <a href="delete-task.php?id=<?php echo $task['id']; ?>" class="btn-sm btn-danger" onclick="return confirm('Delete this task?')">Delete</a>
