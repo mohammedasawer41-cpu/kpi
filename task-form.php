@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $status = isset($_POST['status']) ? $_POST['status'] : 'Not Yet Started';
     $priority = isset($_POST['priority']) ? $_POST['priority'] : 'Medium';
     $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
+    $anomalies_detected = isset($_POST['anomalies_detected']) ? trim($_POST['anomalies_detected']) : '';
 
     if (empty($description)) {
         $error = 'Task description is required';
@@ -67,14 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (empty($error)) {
             if ($taskId) {
                 // Update existing task
-                $query = "UPDATE tasks SET description = ?, task_date = ?, assigned_to = ?, status = ?, priority = ?, notes = ? WHERE id = ?";
+                $query = "UPDATE tasks SET description = ?, task_date = ?, assigned_to = ?, status = ?, priority = ?, notes = ?, anomalies_detected = ? WHERE id = ?";
                 $stmt = $conn->prepare($query);
-                $stmt->bind_param('ssisssi', $description, $task_date, $assigned_to, $status, $priority, $notes, $taskId);
+                $stmt->bind_param('ssissssi', $description, $task_date, $assigned_to, $status, $priority, $notes, $anomalies_detected, $taskId);
             } else {
                 // Insert new task
-                $query = "INSERT INTO tasks (description, task_date, assigned_to, status, priority, notes) VALUES (?, ?, ?, ?, ?, ?)";
+                $query = "INSERT INTO tasks (description, task_date, assigned_to, status, priority, notes, anomalies_detected) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $conn->prepare($query);
-                $stmt->bind_param('ssisss', $description, $task_date, $assigned_to, $status, $priority, $notes);
+                $stmt->bind_param('ssissss', $description, $task_date, $assigned_to, $status, $priority, $notes, $anomalies_detected);
             }
 
             if ($stmt->execute()) {
@@ -165,6 +166,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <div class="form-group">
                         <label for="notes">Notes</label>
                         <textarea id="notes" name="notes"><?php echo $task ? htmlspecialchars($task['notes']) : ''; ?></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="anomalies_detected">Anomalies Detected</label>
+                        <textarea id="anomalies_detected" name="anomalies_detected" placeholder="Describe any anomalies detected for this task (you can create a separate PDCA for each)"><?php echo $task ? htmlspecialchars($task['anomalies_detected']) : ''; ?></textarea>
                     </div>
 
                     <div class="form-actions">
