@@ -8,6 +8,12 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Auto-update overdue tasks (only if still "Not Yet Started" or "Ongoing")
+$updateQuery = "UPDATE tasks SET status = 'Overdue' 
+                WHERE task_date < CURDATE() 
+                AND status IN ('Not Yet Started', 'Ongoing')";
+$conn->query($updateQuery);
+
 // Get current month and year
 $month = isset($_GET['month']) ? (int)$_GET['month'] : date('m');
 $year = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
@@ -103,10 +109,10 @@ while ($row = $peopleResult->fetch_assoc()) {
                             $isToday = $dateStr === date('Y-m-d');
                             $hasTasks = isset($tasks[$dateStr]);
 
-                            echo '<div class="calendar-day ' . ($isToday ? 'today' : '') . ' ' . ($hasTask ? 'has-tasks' : '') . '">';
+                            echo '<div class="calendar-day ' . ($isToday ? 'today' : '') . ' ' . ($hasTasks ? 'has-tasks' : '') . '">';
                             echo '<div class="day-number">' . $day . '</div>';
 
-                            if ($hasTask) {
+                            if ($hasTasks) {
                                 echo '<div class="day-tasks">';
                                 foreach ($tasks[$dateStr] as $task) {
                                     $statusClass = 'status-' . strtolower(str_replace(' ', '-', $task['status']));
@@ -172,7 +178,7 @@ while ($row = $peopleResult->fetch_assoc()) {
                             echo '<strong>' . htmlspecialchars($task['description']) . '</strong><br>';
                             echo '<small>' . ($task['person_name'] ? 'Assigned to: ' . htmlspecialchars($task['person_name']) : 'Unassigned') . '</small><br>';
                             echo '<small>Status: ' . htmlspecialchars($task['status']) . '</small><br>';
-                            echo '<a href="task-detail.php?id=' . $task['id'] . '" class="btn-sm">View</a> ';
+                            echo '<a href="task-form.php?id=' . $task['id'] . '" class="btn-sm">Edit</a> ';
                             echo '<a href="delete-task.php?id=' . $task['id'] . '" class="btn-sm btn-danger" onclick="return confirm(\'Delete this task?\')">Delete</a>';
                             echo '</div>';
                         }
