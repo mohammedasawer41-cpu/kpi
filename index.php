@@ -116,7 +116,7 @@ while ($row = $peopleResult->fetch_assoc()) {
                                 echo '<div class="day-tasks">';
                                 foreach ($tasks[$dateStr] as $task) {
                                     $statusClass = 'status-' . strtolower(str_replace(' ', '-', $task['status']));
-                                    echo '<div class="task-badge ' . $statusClass . '" title="' . htmlspecialchars($task['description']) . '">';
+                                    echo '<div class="task-badge ' . $statusClass . '" title="' . htmlspecialchars($task['description']) . '" onclick="openTaskModal(' . $task['id'] . ', ' . htmlspecialchars(json_encode($task)) . ')" style="cursor: pointer;">';
                                     echo htmlspecialchars(substr($task['description'], 0, 15)) . '...';
                                     echo '</div>';
                                 }
@@ -190,5 +190,106 @@ while ($row = $peopleResult->fetch_assoc()) {
             </div>
         </main>
     </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Update Task</h2>
+                <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-task-info">
+                    <div class="modal-task-description" id="modalTaskDesc"></div>
+                    <div class="modal-task-date" id="modalTaskDate"></div>
+                </div>
+
+                <form id="taskModalForm" onsubmit="saveTaskModal(event)">
+                    <input type="hidden" id="modalTaskId" name="task_id">
+
+                    <div class="modal-form-group">
+                        <label for="modalStatus">Status</label>
+                        <select id="modalStatus" name="status" required>
+                            <option value="Not Yet Started">Not Yet Started</option>
+                            <option value="Ongoing">Ongoing</option>
+                            <option value="Done">Done</option>
+                            <option value="Overdue">Overdue</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="modalAnomalies">Anomalies Detected</label>
+                        <textarea id="modalAnomalies" name="anomalies_detected" placeholder="Describe any anomalies detected for this task (you can create a separate PDCA for each)"></textarea>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="modal-btn modal-btn-save">Save Changes</button>
+                        <button type="button" class="modal-btn modal-btn-cancel" onclick="closeTaskModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Open task modal
+        function openTaskModal(taskId, taskData) {
+            document.getElementById('modalTaskId').value = taskId;
+            document.getElementById('modalTaskDesc').textContent = taskData.description;
+            document.getElementById('modalTaskDate').textContent = 'Date: ' + new Date(taskData.task_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('modalStatus').value = taskData.status;
+            document.getElementById('modalAnomalies').value = taskData.anomalies_detected || '';
+            
+            document.getElementById('taskModal').classList.add('show');
+        }
+
+        // Close task modal
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('show');
+            document.getElementById('taskModalForm').reset();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('taskModal');
+            if (event.target === modal) {
+                closeTaskModal();
+            }
+        }
+
+        // Save task changes
+        function saveTaskModal(event) {
+            event.preventDefault();
+
+            const taskId = document.getElementById('modalTaskId').value;
+            const status = document.getElementById('modalStatus').value;
+            const anomalies = document.getElementById('modalAnomalies').value;
+
+            const formData = new FormData();
+            formData.append('task_id', taskId);
+            formData.append('status', status);
+            formData.append('anomalies_detected', anomalies);
+
+            fetch('update-task-modal.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Task updated successfully!');
+                    closeTaskModal();
+                    // Reload the page to refresh the calendar
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving the task');
+            });
+        }
+    </script>
 </body>
 </html>
