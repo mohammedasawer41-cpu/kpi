@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status ENUM('Not Yet Started', 'Ongoing', 'Done', 'Overdue') DEFAULT 'Not Yet Started',
     priority ENUM('Low', 'Medium', 'High') DEFAULT 'Medium',
     notes TEXT,
+    anomalies_detected TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (assigned_to) REFERENCES people(id) ON DELETE SET NULL,
@@ -64,6 +65,19 @@ if ($conn->multi_query($createTablesSQL) === TRUE) {
     while ($conn->next_result()) {;}
 } else {
     die("Error creating tables: " . $conn->error);
+}
+
+// Add anomalies_detected column if it doesn't exist
+$checkColumnSQL = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_NAME = 'tasks' AND TABLE_SCHEMA = '" . $database . "' 
+                   AND COLUMN_NAME = 'anomalies_detected'";
+$result = $conn->query($checkColumnSQL);
+
+if ($result->num_rows == 0) {
+    $alterSQL = "ALTER TABLE tasks ADD COLUMN anomalies_detected TEXT AFTER notes";
+    if ($conn->query($alterSQL) === FALSE) {
+        // Column might already exist, continue silently
+    }
 }
 
 // Set charset to UTF-8
