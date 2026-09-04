@@ -39,7 +39,7 @@ if ($taskId) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $description = isset($_POST['description']) ? trim($_POST['description']) : '';
     $task_date = isset($_POST['task_date']) ? $_POST['task_date'] : $taskDate;
-    $assigned_to = isset($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
+    $assigned_to = isset($_POST['assigned_to']) && !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
     $status = isset($_POST['status']) ? $_POST['status'] : 'Not Yet Started';
     $priority = isset($_POST['priority']) ? $_POST['priority'] : 'Medium';
     $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
@@ -49,26 +49,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } elseif (empty($task_date)) {
         $error = 'Task date is required';
     } else {
-        if ($taskId) {
-            // Update existing task
-            $query = "UPDATE tasks SET description = ?, task_date = ?, assigned_to = ?, status = ?, priority = ?, notes = ? WHERE id = ?";
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param('ssisssi', $description, $task_date, $assigned_to, $status, $priority, $notes, $taskId);
-        } else {
-            // Insert new task
-            $query = "INSERT INTO tasks (description, task_date, assigned_to, status, priority, notes) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param('ssisss', $description, $task_date, $assigned_to, $status, $priority, $notes);
+        // Validate assigned_to person exists if provided
+        if ($assigned_to !== null) {
+            $validateQuery = "SELECT id FROM people WHERE id = ?";
+            $validateStmt = $conn->prepare($validateQuery);
+            $validateStmt->bind_param('i', $assigned_to);
+            $validateStmt->execute();
+            $validateResult = $validateStmt->get_result();
+            
+            if ($validateResult->num_rows == 0) {
+                $error = 'Selected person does not exist';
+                $assigned_to = null;
+            }
+            $validateStmt->close();
         }
 
-        if ($stmt->execute()) {
-            $success = $taskId ? 'Task updated successfully!' : 'Task created successfully!';
-            header("Location: index.php?month=" . date('m', strtotime($task_date)) . "&year=" . date('Y', strtotime($task_date)));
-            exit();
-        } else {
-            $error = 'Error saving task: ' . $stmt->error;
+        if (empty($error)) {
+            if ($taskId) {
+                // Update existing task
+                $query = "UPDATE tasks SET description = ?, task_date = ?, assigned_to = ?, status = ?, priority = ?, notes = ? WHERE id = ?";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param('ssisssi', $description, $task_date, $assigned_to, $status, $priority, $notes, $taskId);
+            } else {
+                // Insert new task
+                $query = "INSERT INTO tasks (description, task_date, assigned_to, status, priority, notes) VALUES (?, ?, ?, ?, ?, ?)";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param('ssisss', $description, $task_date, $assigned_to, $status, $priority, $notes);
+            }
+
+            if ($stmt->execute()) {
+                $success = $taskId ? 'Task updated successfully!' : 'Task created successfully!';
+                header("Location: index.php?month=" . date('m', strtotime($task_date)) . "&year=" . date('Y', strtotime($task_date)));
+                exit();
+            } else {
+                $error = 'Error saving task: ' . $stmt->error;
+            }
+            $stmt->close();
         }
-        $stmt->close();
     }
 }
 ?>
